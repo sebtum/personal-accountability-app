@@ -1,1 +1,15 @@
 node_modules/
+.next/
+.env.local
+.env.*.local
+out/
+
+# Generated PWA assets (rebuilt on every production build)
+public/sw.js
+public/workbox-*.js
+public/swe-worker-*.js
+
+# Claude Code tooling
+.claude/
+.agents/
+skills-lock.json
