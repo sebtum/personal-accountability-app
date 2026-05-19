@@ -48,6 +48,7 @@ export interface Database {
           deadline?: string;
           updated_at?: string;
         };
+        Relationships: never[];
       };
       tasks: {
         Row: {
@@ -82,6 +83,7 @@ export interface Database {
           checklist?: ChecklistItem[];
           updated_at?: string;
         };
+        Relationships: never[];
       };
       time_logs: {
         Row: {
@@ -113,6 +115,7 @@ export interface Database {
           notes?: string | null;
           is_manual?: boolean;
         };
+        Relationships: never[];
       };
     };
     Views: {
@@ -126,6 +129,7 @@ export interface Database {
           actual_hours: number;
           is_overrun: boolean;
         };
+        Relationships: never[];
       };
     };
     Functions: Record<string, never>;
@@ -133,5 +137,6 @@ export interface Database {
       project_status: ProjectStatus;
       task_status: TaskStatus;
     };
+    CompositeTypes: Record<string, never>;
   };
 }

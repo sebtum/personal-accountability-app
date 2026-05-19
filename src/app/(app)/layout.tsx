@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { NavLinks } from "@/components/nav-links";
+import { logout } from "@/lib/actions/auth";
 
 export default async function AppLayout({
   children,
@@ -18,9 +20,22 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b px-4 py-3 flex items-center justify-between">
-        <span className="font-semibold text-sm">Accountability</span>
+        <div className="flex items-center gap-6">
+          <span className="font-semibold text-sm">Accountability</span>
+          <NavLinks />
+        </div>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Abmelden
+          </button>
+        </form>
       </header>
-      <main className="flex-1 p-4 md:p-6">{children}</main>
+      <main className="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full">
+        {children}
+      </main>
     </div>
   );
 }
