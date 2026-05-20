@@ -51,9 +51,12 @@ export default async function ProjectsPage() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm truncate">
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="font-medium text-sm truncate hover:underline"
+                  >
                     {project.name}
-                  </span>
+                  </Link>
                   <span
                     className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CLASSES[project.status]}`}
                   >

@@ -1,0 +1,26 @@
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
+
+type Task = Database["public"]["Tables"]["tasks"]["Row"];
+
+export async function getTasksByProject(projectId: string): Promise<Task[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getTask(id: string): Promise<Task | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) return null;
+  return data;
+}
