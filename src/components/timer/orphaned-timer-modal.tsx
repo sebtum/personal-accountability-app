@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   resolveOrphanedTimerAction,
   discardOrphanedTimerAction,
 } from "@/lib/actions/time-logs";
 import { Button } from "@/components/ui/button";
+import { useTimerStore } from "@/store/index";
 import type { OrphanedTimer } from "@/lib/data/time-logs";
 
 function formatDateTime(iso: string) {
@@ -20,12 +21,18 @@ function toLocalInputValue(date: Date) {
 }
 
 export function OrphanedTimerModal({ timer }: { timer: OrphanedTimer }) {
+  const { startTimer, stopTimer } = useTimerStore();
   const [customEnd, setCustomEnd] = useState(
     toLocalInputValue(new Date())
   );
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Sync Zustand with the orphaned timer so the correct task shows "Stop"
+  useEffect(() => {
+    startTimer(timer.task_id, timer.id, new Date(timer.started_at));
+  }, [timer.task_id, timer.id, timer.started_at, startTimer]);
 
   if (resolved) return null;
 
@@ -36,6 +43,7 @@ export function OrphanedTimerModal({ timer }: { timer: OrphanedTimer }) {
       if (result?.error) {
         setError(result.error);
       } else {
+        stopTimer();
         setResolved(true);
       }
     });
@@ -48,6 +56,7 @@ export function OrphanedTimerModal({ timer }: { timer: OrphanedTimer }) {
       if (result?.error) {
         setError(result.error);
       } else {
+        stopTimer();
         setResolved(true);
       }
     });

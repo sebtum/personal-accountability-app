@@ -40,7 +40,6 @@ export async function startTimerAction(
 
   if (error) return { error: "Timer konnte nicht gestartet werden." };
 
-  revalidatePath(`/projects/${projectId}`);
   return { logId: data.id };
 }
 
@@ -59,7 +58,11 @@ async function closeTimeLog(
     .eq("id", logId)
     .single();
 
-  if (fetchError || !log) return { error: "Zeitprotokoll nicht gefunden." };
+  if (fetchError) {
+    if (fetchError.code === "PGRST116") return null; // already stopped or deleted
+    return { error: "Zeitprotokoll konnte nicht geladen werden." };
+  }
+  if (!log) return null;
 
   const durationMs = endedAtDate.getTime() - new Date(log.started_at).getTime();
   const durationMinutes = Math.max(0, Math.round(durationMs / 60000));
