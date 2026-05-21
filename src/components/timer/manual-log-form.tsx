@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { createManualTimeLogAction } from "@/lib/actions/time-logs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,18 +19,20 @@ type Props = {
 
 export function ManualLogForm({ taskId, taskName, projectId }: Props) {
   const [open, setOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [state, formAction, isPending] = useActionState(
-    createManualTimeLogAction,
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (submitted && !isPending && !state?.error) {
-      setOpen(false);
-      setSubmitted(false);
-    }
-  }, [submitted, isPending, state]);
+  function handleSubmit(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const result = await createManualTimeLogAction(null, formData);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        setOpen(false);
+      }
+    });
+  }
 
   if (!open) {
     return (
@@ -51,13 +53,7 @@ export function ManualLogForm({ taskId, taskName, projectId }: Props) {
         <h3 className="font-semibold mb-1">Zeit erfassen</h3>
         <p className="text-sm text-muted-foreground mb-4">{taskName}</p>
 
-        <form
-          action={(formData) => {
-            setSubmitted(true);
-            formAction(formData);
-          }}
-          className="space-y-3"
-        >
+        <form action={handleSubmit} className="space-y-3">
           <input type="hidden" name="task_id" value={taskId} />
           <input type="hidden" name="project_id" value={projectId} />
 
@@ -93,8 +89,8 @@ export function ManualLogForm({ taskId, taskName, projectId }: Props) {
             />
           </div>
 
-          {state?.error && (
-            <p className="text-sm text-destructive">{state.error}</p>
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
           )}
 
           <div className="flex gap-2 pt-1">

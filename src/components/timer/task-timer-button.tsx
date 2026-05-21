@@ -30,10 +30,7 @@ export function TaskTimerButton({ taskId, projectId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isActive || !timerStartedAt) {
-      setElapsed(0);
-      return;
-    }
+    if (!isActive || !timerStartedAt) return;
     const update = () => {
       setElapsed(
         Math.floor((Date.now() - timerStartedAt.getTime()) / 1000)
