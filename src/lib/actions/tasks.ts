@@ -7,6 +7,15 @@ import type { TaskStatus, ChecklistItem } from "@/types/database";
 
 export type TaskActionState = { error: string } | null;
 
+const VALID_TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "done"];
+
+async function requireUser() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  return supabase;
+}
+
 export async function createTask(
   prevState: TaskActionState,
   formData: FormData
@@ -29,7 +38,7 @@ export async function createTask(
     return { error: "Checkliste konnte nicht verarbeitet werden." };
   }
 
-  const supabase = await createClient();
+  const supabase = await requireUser();
   const { error } = await supabase.from("tasks").insert({
     project_id,
     name,
@@ -39,7 +48,7 @@ export async function createTask(
     status: "todo",
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: "Aufgabe konnte nicht erstellt werden." };
 
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
@@ -61,6 +70,9 @@ export async function updateTask(
   if (isNaN(estimated_hours) || estimated_hours <= 0) {
     return { error: "Geschätzte Stunden müssen größer als 0 sein." };
   }
+  if (!VALID_TASK_STATUSES.includes(status)) {
+    return { error: "Ungültiger Status." };
+  }
 
   let checklist: ChecklistItem[] = [];
   try {
@@ -69,13 +81,13 @@ export async function updateTask(
     return { error: "Checkliste konnte nicht verarbeitet werden." };
   }
 
-  const supabase = await createClient();
+  const supabase = await requireUser();
   const { error } = await supabase
     .from("tasks")
     .update({ name, description, estimated_hours, status, checklist })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: "Aufgabe konnte nicht gespeichert werden." };
 
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
@@ -84,7 +96,7 @@ export async function updateTask(
 export async function deleteTask(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const project_id = formData.get("project_id") as string;
-  const supabase = await createClient();
+  const supabase = await requireUser();
   await supabase.from("tasks").delete().eq("id", id);
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
