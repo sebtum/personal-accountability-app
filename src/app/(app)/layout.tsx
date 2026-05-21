@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NavLinks } from "@/components/nav-links";
 import { logout } from "@/lib/actions/auth";
+import { OrphanedTimerChecker } from "@/components/timer/orphaned-timer-checker";
 
 export default async function AppLayout({
   children,
@@ -19,6 +20,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
+      <OrphanedTimerChecker />
       <header className="border-b px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <span className="font-semibold text-sm">Accountability</span>

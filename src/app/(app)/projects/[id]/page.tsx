@@ -7,6 +7,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { Database } from "@/types/database";
+import { TaskTimerButton } from "@/components/timer/task-timer-button";
+import { ManualLogForm } from "@/components/timer/manual-log-form";
 
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
@@ -65,7 +67,6 @@ export default async function ProjectDetailPage({
     done: tasks.filter((t) => t.status === "done").length,
   };
 
-  // Show in-progress first, then todo, then done
   const sorted = [...tasks].sort((a, b) => {
     const order = { in_progress: 0, todo: 1, done: 2 };
     return order[a.status] - order[b.status];
@@ -139,7 +140,8 @@ export default async function ProjectDetailPage({
                   <span
                     className={cn(
                       "font-medium text-sm",
-                      task.status === "done" && "line-through text-muted-foreground"
+                      task.status === "done" &&
+                        "line-through text-muted-foreground"
                     )}
                   >
                     {task.name}
@@ -158,7 +160,15 @@ export default async function ProjectDetailPage({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                {task.status !== "done" && (
+                  <TaskTimerButton taskId={task.id} projectId={id} />
+                )}
+                <ManualLogForm
+                  taskId={task.id}
+                  taskName={task.name}
+                  projectId={id}
+                />
                 <Link
                   href={`/projects/${id}/tasks/${task.id}/edit`}
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
