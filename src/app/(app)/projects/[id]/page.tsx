@@ -1,5 +1,5 @@
 import { getProject } from "@/lib/data/projects";
-import { getTasksByProject } from "@/lib/data/tasks";
+import { getTasksByProject, getTaskActualsByProject } from "@/lib/data/tasks";
 import { deleteTask } from "@/lib/actions/tasks";
 import { buttonVariants } from "@/components/ui/button";
 import { DeleteForm } from "@/components/delete-form";
@@ -39,6 +39,16 @@ function formatDate(d: string) {
   return `${day}.${m}.${y}`;
 }
 
+function formatActualHours(hours: number): string {
+  if (hours <= 0) return "";
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
+}
+
 function ChecklistProgress({ checklist }: { checklist: Task["checklist"] }) {
   if (!checklist || checklist.length === 0) return null;
   const done = checklist.filter((i) => i.completed).length;
@@ -55,10 +65,12 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, tasks] = await Promise.all([
+  const [project, tasks, actuals] = await Promise.all([
     getProject(id),
     getTasksByProject(id),
+    getTaskActualsByProject(id),
   ]);
+  const actualsMap = new Map(actuals.map((a) => [a.task_id, a]));
   if (!project) notFound();
 
   const totalHours = tasks.reduce((sum, t) => sum + t.estimated_hours, 0);
@@ -153,10 +165,22 @@ export default async function ProjectDetailPage({
                     {TASK_STATUS_LABELS[task.status]}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-muted-foreground">
                     {task.estimated_hours}h geschätzt
                   </span>
+                  {(() => {
+                    const actual = actualsMap.get(task.id);
+                    const formatted = formatActualHours(actual?.actual_hours ?? 0);
+                    if (!formatted) return null;
+                    return (
+                      <span
+                        className={`text-xs font-medium ${actual?.is_overrun ? "text-destructive" : "text-primary"}`}
+                      >
+                        {formatted} erfasst{actual?.is_overrun ? " ⚠" : ""}
+                      </span>
+                    );
+                  })()}
                   <ChecklistProgress checklist={task.checklist} />
                 </div>
               </div>
