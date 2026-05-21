@@ -1,7 +1,8 @@
 import { getProject } from "@/lib/data/projects";
 import { getTasksByProject } from "@/lib/data/tasks";
 import { deleteTask } from "@/lib/actions/tasks";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { DeleteForm } from "@/components/delete-form";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -175,18 +176,13 @@ export default async function ProjectDetailPage({
                 >
                   Bearbeiten
                 </Link>
-                <form action={deleteTask}>
+                <DeleteForm
+                  action={deleteTask}
+                  confirmMessage={`Aufgabe „${task.name}" wirklich löschen?`}
+                >
                   <input type="hidden" name="id" value={task.id} />
                   <input type="hidden" name="project_id" value={id} />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Löschen
-                  </Button>
-                </form>
+                </DeleteForm>
               </div>
             </div>
           ))}

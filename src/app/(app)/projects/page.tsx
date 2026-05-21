@@ -1,6 +1,7 @@
 import { getProjects } from "@/lib/data/projects";
 import { deleteProject } from "@/lib/actions/projects";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { DeleteForm } from "@/components/delete-form";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { Database } from "@/types/database";
@@ -80,17 +81,12 @@ export default async function ProjectsPage() {
                 >
                   Bearbeiten
                 </Link>
-                <form action={deleteProject}>
+                <DeleteForm
+                  action={deleteProject}
+                  confirmMessage={`Projekt „${project.name}" wirklich löschen?`}
+                >
                   <input type="hidden" name="id" value={project.id} />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Löschen
-                  </Button>
-                </form>
+                </DeleteForm>
               </div>
             </div>
           ))}

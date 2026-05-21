@@ -18,6 +18,16 @@ export async function startTimerAction(
   projectId: string
 ): Promise<{ logId: string } | { error: string }> {
   const supabase = await requireUser();
+
+  const { count } = await supabase
+    .from("time_logs")
+    .select("id", { count: "exact", head: true })
+    .is("ended_at", null);
+
+  if (count && count > 0) {
+    return { error: "Es läuft bereits ein Timer. Bitte zuerst stoppen." };
+  }
+
   const { data, error } = await supabase
     .from("time_logs")
     .insert({

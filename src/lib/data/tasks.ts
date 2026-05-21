@@ -21,6 +21,9 @@ export async function getTask(id: string): Promise<Task | null> {
     .select("*")
     .eq("id", id)
     .single();
-  if (error) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error("Datenbankfehler");
+  }
   return data;
 }

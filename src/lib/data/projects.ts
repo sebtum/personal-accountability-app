@@ -20,6 +20,9 @@ export async function getProject(id: string): Promise<Project | null> {
     .select("*")
     .eq("id", id)
     .single();
-  if (error) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error("Datenbankfehler");
+  }
   return data;
 }
