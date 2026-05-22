@@ -93,6 +93,23 @@ export async function updateTask(
   redirect(`/projects/${project_id}`);
 }
 
+export async function updateTaskStatus(
+  taskId: string,
+  status: TaskStatus,
+  projectId: string
+): Promise<TaskActionState> {
+  if (!VALID_TASK_STATUSES.includes(status)) return { error: "Ungültiger Status." };
+  const supabase = await requireUser();
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status })
+    .eq("id", taskId)
+    .eq("project_id", projectId);
+  if (error) return { error: "Status konnte nicht gespeichert werden." };
+  revalidatePath(`/projects/${projectId}`);
+  return null;
+}
+
 export async function toggleChecklistItem(
   taskId: string,
   itemId: string,

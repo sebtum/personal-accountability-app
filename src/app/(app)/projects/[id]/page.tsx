@@ -11,20 +11,7 @@ import type { Database } from "@/types/database";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
 import { ManualLogForm } from "@/components/timer/manual-log-form";
 import { TaskChecklist } from "@/components/tasks/task-checklist";
-
-type Task = Database["public"]["Tables"]["tasks"]["Row"];
-
-const TASK_STATUS_LABELS: Record<Task["status"], string> = {
-  todo: "Offen",
-  in_progress: "In Bearbeitung",
-  done: "Erledigt",
-};
-
-const TASK_STATUS_CLASSES: Record<Task["status"], string> = {
-  todo: "bg-muted text-muted-foreground",
-  in_progress: "bg-primary/10 text-primary",
-  done: "bg-muted text-muted-foreground",
-};
+import { TaskStatusSelect } from "@/components/tasks/task-status-select";
 
 const PROJECT_STATUS_LABELS: Record<
   Database["public"]["Tables"]["projects"]["Row"]["status"],
@@ -151,11 +138,11 @@ export default async function ProjectDetailPage({
                   >
                     {task.name}
                   </span>
-                  <span
-                    className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${TASK_STATUS_CLASSES[task.status]}`}
-                  >
-                    {TASK_STATUS_LABELS[task.status]}
-                  </span>
+                  <TaskStatusSelect
+                    taskId={task.id}
+                    projectId={id}
+                    currentStatus={task.status}
+                  />
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-muted-foreground">

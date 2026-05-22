@@ -29,6 +29,7 @@ export type WeeklyChartData = {
 export type DailyChartData = {
   bars: Record<string, string | number>[];
   projects: { name: string; color: string }[];
+  weekLabel: string;
 };
 
 export type InProgressTask = {
@@ -110,12 +111,24 @@ export async function getWeeklyHours(): Promise<WeeklyChartData> {
   return { bars, projects };
 }
 
-export async function getDailyHours(): Promise<DailyChartData> {
+function formatShortDate(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}.`;
+}
+
+export async function getDailyHours(weekOffset: number = 0): Promise<DailyChartData> {
   const supabase = await createClient();
 
-  const monday = getMonday(new Date());
+  const base = new Date();
+  base.setDate(base.getDate() + weekOffset * 7);
+  const monday = getMonday(base);
   const nextMonday = new Date(monday);
   nextMonday.setDate(monday.getDate() + 7);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const weekLabel = `${getWeekLabel(monday)}, ${formatShortDate(monday)}–${formatShortDate(sunday)}${sunday.getFullYear()}`;
 
   const { data: rawData, error } = await supabase
     .from("time_logs")
@@ -125,7 +138,7 @@ export async function getDailyHours(): Promise<DailyChartData> {
     .gte("started_at", monday.toISOString())
     .lt("started_at", nextMonday.toISOString());
 
-  if (error) return { bars: [], projects: [] };
+  if (error) return { bars: [], projects: [], weekLabel };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = rawData as any[] | null;
@@ -167,7 +180,7 @@ export async function getDailyHours(): Promise<DailyChartData> {
     color: CHART_COLORS[i % CHART_COLORS.length],
   }));
 
-  return { bars, projects };
+  return { bars, projects, weekLabel };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

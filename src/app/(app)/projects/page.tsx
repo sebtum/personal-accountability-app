@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { DeleteForm } from "@/components/delete-form";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -54,9 +55,10 @@ export default async function ProjectsPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="font-medium text-sm truncate hover:underline"
+                    className="font-medium text-sm truncate text-primary hover:underline inline-flex items-center gap-0.5"
                   >
                     {project.name}
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
                   </Link>
                   <span
                     className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CLASSES[project.status]}`}
