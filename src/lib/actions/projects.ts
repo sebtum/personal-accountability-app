@@ -79,7 +79,8 @@ export async function updateProject(
 export async function deleteProject(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const supabase = await requireUser();
-  await supabase.from("projects").delete().eq("id", id);
+  const { error } = await supabase.from("projects").delete().eq("id", id);
+  if (error) return;
   revalidatePath("/projects");
   redirect("/projects");
 }

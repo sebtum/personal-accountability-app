@@ -45,7 +45,7 @@ export function TaskTimerButton({ taskId, projectId }: Props) {
     if (activeTaskId && activeTaskId !== taskId) return;
     setError(null);
     startTransition(async () => {
-      const result = await startTimerAction(taskId, projectId);
+      const result = await startTimerAction(taskId);
       if ("error" in result) {
         setError(result.error);
         return;

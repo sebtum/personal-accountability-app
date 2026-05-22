@@ -14,8 +14,7 @@ async function requireUser() {
 }
 
 export async function startTimerAction(
-  taskId: string,
-  projectId: string
+  taskId: string
 ): Promise<{ logId: string } | { error: string }> {
   const supabase = await requireUser();
 
@@ -84,6 +83,7 @@ export async function stopTimerAction(
   const result = await closeTimeLog(logId, endedAt);
   if (result) return result;
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
   return null;
 }
 
@@ -94,6 +94,7 @@ export async function resolveOrphanedTimerAction(
   const result = await closeTimeLog(logId, endedAt);
   if (result) return result;
   revalidatePath("/");
+  revalidatePath("/projects", "layout");
   return null;
 }
 

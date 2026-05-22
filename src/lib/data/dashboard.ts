@@ -57,7 +57,6 @@ export async function getWeeklyHours(): Promise<WeeklyChartData> {
   const since = new Date();
   since.setDate(since.getDate() - 56);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawData } = await supabase
     .from("time_logs")
     .select("started_at, duration_minutes, tasks(project_id, projects(name))")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { toggleChecklistItem } from "@/lib/actions/tasks";
 import type { ChecklistItem } from "@/types/database";
@@ -14,7 +14,7 @@ type Props = {
 export function TaskChecklist({ taskId, projectId, checklist }: Props) {
   const [open, setOpen] = useState(false);
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
-  const [isPending, startTransition] = useTransition();
+  const [pending, setPending] = useState<Set<string>>(new Set());
 
   if (!checklist.length) return null;
 
@@ -25,11 +25,22 @@ export function TaskChecklist({ taskId, projectId, checklist }: Props) {
 
   const done = items.filter((i) => i.completed).length;
 
-  function handleToggle(itemId: string, completed: boolean) {
+  async function handleToggle(itemId: string, completed: boolean) {
     setOptimistic((prev) => ({ ...prev, [itemId]: completed }));
-    startTransition(async () => {
-      await toggleChecklistItem(taskId, itemId, completed, projectId);
+    setPending((prev) => new Set(prev).add(itemId));
+
+    const result = await toggleChecklistItem(taskId, itemId, completed, projectId);
+
+    setPending((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
     });
+
+    if (result?.error) {
+      // revert optimistic update on failure
+      setOptimistic((prev) => ({ ...prev, [itemId]: !completed }));
+    }
   }
 
   return (
@@ -55,7 +66,7 @@ export function TaskChecklist({ taskId, projectId, checklist }: Props) {
                 id={`cl-${item.id}`}
                 checked={item.completed}
                 onChange={(e) => handleToggle(item.id, e.target.checked)}
-                disabled={isPending}
+                disabled={pending.has(item.id)}
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-primary"
               />
               <label

@@ -38,13 +38,13 @@ export function WeeklyChart({ data }: { data: WeeklyChartData }) {
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-        {data.projects.map((project) => (
+        {data.projects.map((project, i) => (
           <Bar
             key={project.name}
             dataKey={project.name}
             stackId="a"
             fill={project.color}
-            radius={project === data.projects[data.projects.length - 1] ? [3, 3, 0, 0] : undefined}
+            radius={i === data.projects.length - 1 ? [3, 3, 0, 0] : undefined}
           />
         ))}
       </BarChart>

@@ -128,7 +128,8 @@ export async function deleteTask(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const project_id = formData.get("project_id") as string;
   const supabase = await requireUser();
-  await supabase.from("tasks").delete().eq("id", id);
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  if (error) return;
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
 }
