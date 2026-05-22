@@ -49,6 +49,11 @@ export type RecentLog = {
   is_manual: boolean;
 };
 
+export type HourlyChartData = {
+  bars: { hour: string; minPerDay: number }[];
+  windowDays: number;
+};
+
 export type DashboardStats = {
   activeProjects: number;
   openTasks: number;
@@ -181,6 +186,49 @@ export async function getDailyHours(weekOffset: number = 0): Promise<DailyChartD
   }));
 
   return { bars, projects, weekLabel };
+}
+
+export async function getHourlyDistribution(windowDays: number = 7): Promise<HourlyChartData> {
+  const supabase = await createClient();
+
+  const since = new Date();
+  since.setDate(since.getDate() - windowDays);
+  since.setHours(0, 0, 0, 0);
+
+  const { data: rawData, error } = await supabase
+    .from("time_logs")
+    .select("started_at, ended_at")
+    .not("ended_at", "is", null)
+    .gte("started_at", since.toISOString());
+
+  const hourTotals = new Array<number>(24).fill(0);
+
+  if (!error && rawData) {
+    for (const row of rawData) {
+      const start = new Date(row.started_at);
+      const end = new Date(row.ended_at as string);
+      if (isNaN(end.getTime())) continue;
+
+      let cur = new Date(start);
+      while (cur < end) {
+        const nextHour = new Date(cur);
+        nextHour.setMinutes(0, 0, 0);
+        nextHour.setHours(nextHour.getHours() + 1);
+
+        const segEnd = end < nextHour ? end : nextHour;
+        const mins = (segEnd.getTime() - cur.getTime()) / 60000;
+        hourTotals[cur.getHours()] += mins;
+        cur = nextHour;
+      }
+    }
+  }
+
+  const bars = Array.from({ length: 24 }, (_, h) => ({
+    hour: `${h}h`,
+    minPerDay: Math.round((hourTotals[h] / windowDays) * 10) / 10,
+  }));
+
+  return { bars, windowDays };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
