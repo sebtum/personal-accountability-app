@@ -1,5 +1,31 @@
 import { createClient } from "@/lib/supabase/server";
 
+const CHART_COLORS = [
+  "#6366f1", "#f59e0b", "#10b981", "#ef4444",
+  "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316",
+];
+
+function getMonday(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getWeekLabel(monday: Date): string {
+  const d = new Date(monday);
+  d.setDate(d.getDate() + 3);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `KW ${weekNum}`;
+}
+
+export type WeeklyChartData = {
+  bars: Record<string, string | number>[];
+  projects: { name: string; color: string }[];
+};
+
 export type InProgressTask = {
   id: string;
   name: string;
@@ -24,6 +50,61 @@ export type DashboardStats = {
   inProgressTasks: InProgressTask[];
   recentLogs: RecentLog[];
 };
+
+export async function getWeeklyHours(): Promise<WeeklyChartData> {
+  const supabase = await createClient();
+
+  const since = new Date();
+  since.setDate(since.getDate() - 56);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawData } = await supabase
+    .from("time_logs")
+    .select("started_at, duration_minutes, tasks(project_id, projects(name))")
+    .not("ended_at", "is", null)
+    .not("duration_minutes", "is", null)
+    .gte("started_at", since.toISOString());
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = rawData as any[] | null;
+  if (!data?.length) return { bars: [], projects: [] };
+
+  type WeekEntry = { label: string; hours: Map<string, number> };
+  const weekMap = new Map<string, WeekEntry>();
+  const projectNames = new Set<string>();
+
+  for (const row of data) {
+    const projectName: string = row.tasks?.projects?.name ?? "Unbekannt";
+    const monday = getMonday(new Date(row.started_at));
+    const weekKey = monday.toISOString().slice(0, 10);
+
+    projectNames.add(projectName);
+
+    if (!weekMap.has(weekKey)) {
+      weekMap.set(weekKey, { label: getWeekLabel(monday), hours: new Map() });
+    }
+    const entry = weekMap.get(weekKey)!;
+    entry.hours.set(projectName, (entry.hours.get(projectName) ?? 0) + (row.duration_minutes ?? 0));
+  }
+
+  const sortedProjects = [...projectNames].sort();
+  const bars = [...weekMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, entry]) => {
+      const bar: Record<string, string | number> = { week: entry.label };
+      for (const name of sortedProjects) {
+        bar[name] = Math.round(((entry.hours.get(name) ?? 0) / 60) * 10) / 10;
+      }
+      return bar;
+    });
+
+  const projects = sortedProjects.map((name, i) => ({
+    name,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  return { bars, projects };
+}
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient();

@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import type { Database } from "@/types/database";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
 import { ManualLogForm } from "@/components/timer/manual-log-form";
+import { TaskChecklist } from "@/components/tasks/task-checklist";
 
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
@@ -49,15 +50,6 @@ function formatActualHours(hours: number): string {
   return `${h} h ${m} min`;
 }
 
-function ChecklistProgress({ checklist }: { checklist: Task["checklist"] }) {
-  if (!checklist || checklist.length === 0) return null;
-  const done = checklist.filter((i) => i.completed).length;
-  return (
-    <span className="text-xs text-muted-foreground">
-      {done}/{checklist.length} Checkliste
-    </span>
-  );
-}
 
 export default async function ProjectDetailPage({
   params,
@@ -181,8 +173,12 @@ export default async function ProjectDetailPage({
                       </span>
                     );
                   })()}
-                  <ChecklistProgress checklist={task.checklist} />
                 </div>
+                <TaskChecklist
+                  taskId={task.id}
+                  projectId={id}
+                  checklist={task.checklist}
+                />
               </div>
 
               <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">

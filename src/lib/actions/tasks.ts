@@ -93,6 +93,37 @@ export async function updateTask(
   redirect(`/projects/${project_id}`);
 }
 
+export async function toggleChecklistItem(
+  taskId: string,
+  itemId: string,
+  completed: boolean,
+  projectId: string
+): Promise<TaskActionState> {
+  const supabase = await requireUser();
+
+  const { data: task, error: fetchError } = await supabase
+    .from("tasks")
+    .select("checklist")
+    .eq("id", taskId)
+    .single();
+
+  if (fetchError || !task) return { error: "Aufgabe nicht gefunden." };
+
+  const checklist = task.checklist.map((item: ChecklistItem) =>
+    item.id === itemId ? { ...item, completed } : item
+  );
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ checklist })
+    .eq("id", taskId);
+
+  if (error) return { error: "Checkliste konnte nicht gespeichert werden." };
+
+  revalidatePath(`/projects/${projectId}`);
+  return null;
+}
+
 export async function deleteTask(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const project_id = formData.get("project_id") as string;
