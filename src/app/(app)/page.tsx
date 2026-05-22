@@ -1,6 +1,6 @@
-import { getDashboardStats, getWeeklyHours } from "@/lib/data/dashboard";
+import { getDashboardStats, getWeeklyHours, getDailyHours } from "@/lib/data/dashboard";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
-import { WeeklyChart } from "@/components/dashboard/weekly-chart";
+import { ChartSection } from "@/components/dashboard/chart-section";
 
 function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -36,9 +36,10 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default async function DashboardPage() {
-  const [stats, weeklyHours] = await Promise.all([
+  const [stats, weeklyHours, dailyHours] = await Promise.all([
     getDashboardStats(),
     getWeeklyHours(),
+    getDailyHours(),
   ]);
 
   return (
@@ -108,12 +109,7 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      <section>
-        <h2 className="font-medium mb-3">Stunden pro Woche</h2>
-        <div className="rounded-lg border bg-card p-4">
-          <WeeklyChart data={weeklyHours} />
-        </div>
-      </section>
+      <ChartSection weeklyData={weeklyHours} dailyData={dailyHours} />
     </div>
   );
 }

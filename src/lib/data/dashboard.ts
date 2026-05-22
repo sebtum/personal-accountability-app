@@ -26,6 +26,11 @@ export type WeeklyChartData = {
   projects: { name: string; color: string }[];
 };
 
+export type DailyChartData = {
+  bars: Record<string, string | number>[];
+  projects: { name: string; color: string }[];
+};
+
 export type InProgressTask = {
   id: string;
   name: string;
@@ -96,6 +101,66 @@ export async function getWeeklyHours(): Promise<WeeklyChartData> {
       }
       return bar;
     });
+
+  const projects = sortedProjects.map((name, i) => ({
+    name,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  return { bars, projects };
+}
+
+export async function getDailyHours(): Promise<DailyChartData> {
+  const supabase = await createClient();
+
+  const monday = getMonday(new Date());
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
+
+  const { data: rawData, error } = await supabase
+    .from("time_logs")
+    .select("started_at, duration_minutes, tasks(project_id, projects(name))")
+    .not("ended_at", "is", null)
+    .not("duration_minutes", "is", null)
+    .gte("started_at", monday.toISOString())
+    .lt("started_at", nextMonday.toISOString());
+
+  if (error) return { bars: [], projects: [] };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = rawData as any[] | null;
+
+  const DAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const dayMap = new Map<number, Map<string, number>>();
+  const projectNames = new Set<string>();
+
+  for (const row of data ?? []) {
+    const projectName: string = row.tasks?.projects?.name ?? "Unbekannt";
+    const d = new Date(row.started_at);
+    const dayOfWeek = (d.getDay() + 6) % 7; // 0=Mo … 6=So
+
+    projectNames.add(projectName);
+    if (!dayMap.has(dayOfWeek)) dayMap.set(dayOfWeek, new Map());
+    const entry = dayMap.get(dayOfWeek)!;
+    entry.set(projectName, (entry.get(projectName) ?? 0) + (row.duration_minutes ?? 0));
+  }
+
+  const sortedProjects = [...projectNames].sort();
+
+  const bars = Array.from({ length: 7 }, (_, i) => {
+    const dateForDay = new Date(monday);
+    dateForDay.setDate(monday.getDate() + i);
+    const dd = String(dateForDay.getDate()).padStart(2, "0");
+    const mm = String(dateForDay.getMonth() + 1).padStart(2, "0");
+    const label = `${DAY_LABELS[i]} ${dd}.${mm}.`;
+
+    const bar: Record<string, string | number> = { day: label };
+    const dayEntry = dayMap.get(i);
+    for (const name of sortedProjects) {
+      bar[name] = Math.round(((dayEntry?.get(name) ?? 0) / 60) * 10) / 10;
+    }
+    return bar;
+  });
 
   const projects = sortedProjects.map((name, i) => ({
     name,
