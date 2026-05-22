@@ -2,24 +2,10 @@ import { getProjects } from "@/lib/data/projects";
 import { deleteProject } from "@/lib/actions/projects";
 import { buttonVariants } from "@/components/ui/button";
 import { DeleteForm } from "@/components/delete-form";
+import { ProjectStatusSelect } from "@/components/projects/project-status-select";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import type { Database } from "@/types/database";
-
-type Project = Database["public"]["Tables"]["projects"]["Row"];
-
-const STATUS_LABELS: Record<Project["status"], string> = {
-  active: "Aktiv",
-  completed: "Abgeschlossen",
-  archived: "Archiviert",
-};
-
-const STATUS_CLASSES: Record<Project["status"], string> = {
-  active: "bg-primary/10 text-primary",
-  completed: "bg-muted text-muted-foreground line-through",
-  archived: "bg-muted text-muted-foreground",
-};
+import { Pencil } from "lucide-react";
 
 function formatDate(d: string) {
   const [y, m, day] = d.split("-");
@@ -49,23 +35,15 @@ export default async function ProjectsPage() {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="rounded-lg border bg-card px-4 py-3 flex items-start justify-between gap-4"
+              className="rounded-lg border bg-card flex items-stretch hover:bg-accent/30 transition-colors"
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className="font-medium text-sm truncate text-primary hover:underline inline-flex items-center gap-0.5"
-                  >
-                    {project.name}
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                  </Link>
-                  <span
-                    className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CLASSES[project.status]}`}
-                  >
-                    {STATUS_LABELS[project.status]}
-                  </span>
-                </div>
+              <Link
+                href={`/projects/${project.id}`}
+                className="flex-1 min-w-0 px-4 py-3 block"
+              >
+                <p className="font-medium text-sm truncate mb-0.5">
+                  {project.name}
+                </p>
                 {project.description && (
                   <p className="text-muted-foreground text-xs truncate mb-1">
                     {project.description}
@@ -74,14 +52,16 @@ export default async function ProjectsPage() {
                 <p className="text-muted-foreground text-xs">
                   {formatDate(project.start_date)} → {formatDate(project.deadline)}
                 </p>
-              </div>
+              </Link>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 px-4 py-3 shrink-0 border-l">
+                <ProjectStatusSelect id={project.id} status={project.status} />
                 <Link
                   href={`/projects/${project.id}/edit`}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+                  title="Bearbeiten"
                 >
-                  Bearbeiten
+                  <Pencil className="h-3.5 w-3.5" />
                 </Link>
                 <DeleteForm
                   action={deleteProject}

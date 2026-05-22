@@ -76,6 +76,17 @@ export async function updateProject(
   redirect("/projects");
 }
 
+export async function updateProjectStatus(formData: FormData): Promise<void> {
+  const id = formData.get("id") as string;
+  const status = formData.get("status") as ProjectStatus;
+  if (!id || !VALID_PROJECT_STATUSES.includes(status)) return;
+  const supabase = await requireUser();
+  const { error } = await supabase.from("projects").update({ status }).eq("id", id);
+  if (error) throw new Error("Status konnte nicht gespeichert werden.");
+  revalidatePath("/projects");
+  revalidatePath("/projects/[id]", "page");
+}
+
 export async function deleteProject(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const supabase = await requireUser();
