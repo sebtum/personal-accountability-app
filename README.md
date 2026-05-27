@@ -1,6 +1,6 @@
 # Personal Accountability App
 
-A single-user time-tracking and project accountability app. Track projects, break them into tasks with time estimates, log actual work hours, and visualize progress through burndown charts.
+A single-user time-tracking and project accountability app. Track projects, break them into tasks with time estimates, log actual work hours, and visualize progress through charts.
 
 Built as a Progressive Web App — installable on desktop and mobile.
 
@@ -15,6 +15,31 @@ Built as a Progressive Web App — installable on desktop and mobile.
 | State | Zustand v5 (timer state) |
 | Charts | Recharts |
 | PWA | @ducanh2912/next-pwa |
+
+## Features
+
+**Dashboard**
+- Stats overview: active projects, open tasks, today's logged hours, in-progress tasks
+- "In Bearbeitung" task list with inline timer controls
+- Recent activity feed showing the last time logs
+- Charts: hours per week, hours per day (with week navigation), and hourly productivity distribution (sliding window: 1W / 2W / 1M / 3M)
+
+**Projects**
+- Create, edit, delete projects with name, description, status, start date, and deadline
+- Status badges (aktiv / abgeschlossen / archiviert) with inline quick-select
+- Clickable project cards linking to the detail view
+
+**Tasks**
+- Create, edit, delete tasks per project with name, description, estimated hours, and status
+- JSONB checklist for sub-steps (check off items inline)
+- Quick status dropdown directly in the task list
+- Actual vs. estimated hours tracked via `task_actuals` view; overruns shown as warnings
+
+**Timer**
+- Start/stop timer on any task — creates a `time_log` row with `ended_at = NULL` while running
+- Live elapsed-time display (client-side tick via Zustand)
+- Manual time entry (set `is_manual = true`)
+- Orphaned timer recovery: on app load, any open timer surfaces a modal asking "Bis wann hast du gearbeitet?" — user confirms, adjusts end time, or discards
 
 ## Data Model
 
@@ -98,10 +123,20 @@ All architectural decisions are documented as ADRs in [`docs/adr/`](docs/adr/):
 ```
 src/
 ├── app/
-│   ├── (auth)/login/     # Public login page
-│   └── (app)/            # Protected app shell
-├── components/ui/        # shadcn UI components
-├── lib/supabase/         # Browser + server Supabase clients
-├── store/                # Zustand timer store
-└── types/                # TypeScript database types
+│   ├── (auth)/login/          # Public login page
+│   └── (app)/                 # Protected app shell
+│       ├── page.tsx           # Dashboard
+│       └── projects/          # Projects + Tasks CRUD
+├── components/
+│   ├── ui/                    # shadcn UI primitives
+│   ├── dashboard/             # Chart + stat components
+│   ├── projects/              # Project form, status select
+│   ├── tasks/                 # Task form, checklist, status select
+│   └── timer/                 # Timer button, manual log form, orphaned-timer modal
+├── lib/
+│   ├── supabase/              # Browser + server clients
+│   ├── data/                  # Read-only data fetchers (Server Components)
+│   └── actions/               # Server Actions (mutations)
+├── store/                     # Zustand timer store
+└── types/                     # TypeScript database types
 ```
