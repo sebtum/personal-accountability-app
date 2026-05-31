@@ -1,6 +1,6 @@
 # Personal Accountability App
 
-A single-user time-tracking and project accountability app. Track projects, break them into tasks with time estimates, log actual work hours, and visualize progress through charts.
+A time-tracking and project accountability app. Track projects, break them into tasks with time estimates, log actual work hours, and visualize progress through charts.
 
 Built as a Progressive Web App — installable on desktop and mobile.
 
