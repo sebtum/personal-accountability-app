@@ -1,3 +1,11 @@
+export type PaginatedResult<T> = {
+  data: T[];
+  count: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 export type Json =
   | string
   | number
