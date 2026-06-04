@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { TaskStatus, ChecklistItem } from "@/types/database";
 
@@ -50,6 +50,8 @@ export async function createTask(
 
   if (error) return { error: "Aufgabe konnte nicht erstellt werden." };
 
+  revalidateTag(`tasks-${project_id}`, {});
+  revalidateTag("dashboard", {});
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
 }
@@ -89,6 +91,9 @@ export async function updateTask(
 
   if (error) return { error: "Aufgabe konnte nicht gespeichert werden." };
 
+  revalidateTag(`task-${id}`, {});
+  revalidateTag(`tasks-${project_id}`, {});
+  revalidateTag("dashboard", {});
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
 }
@@ -106,6 +111,9 @@ export async function updateTaskStatus(
     .eq("id", taskId)
     .eq("project_id", projectId);
   if (error) return { error: "Status konnte nicht gespeichert werden." };
+  revalidateTag(`task-${taskId}`, {});
+  revalidateTag(`tasks-${projectId}`, {});
+  revalidateTag("dashboard", {});
   revalidatePath(`/projects/${projectId}`);
   return null;
 }
@@ -137,6 +145,8 @@ export async function toggleChecklistItem(
 
   if (error) return { error: "Checkliste konnte nicht gespeichert werden." };
 
+  revalidateTag(`task-${taskId}`, {});
+  revalidateTag(`tasks-${projectId}`, {});
   revalidatePath(`/projects/${projectId}`);
   return null;
 }
@@ -147,6 +157,9 @@ export async function deleteTask(formData: FormData): Promise<void> {
   const supabase = await requireUser();
   const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) return;
+  revalidateTag(`task-${id}`, {});
+  revalidateTag(`tasks-${project_id}`, {});
+  revalidateTag("dashboard", {});
   revalidatePath(`/projects/${project_id}`);
   redirect(`/projects/${project_id}`);
 }

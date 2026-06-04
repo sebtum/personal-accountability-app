@@ -62,7 +62,8 @@ export function TaskTimerButton({ taskId, projectId }: Props) {
       const result = await stopTimerAction(
         logId,
         projectId,
-        new Date().toISOString()
+        new Date().toISOString(),
+        taskId
       );
       if (result?.error) {
         setError(result.error);

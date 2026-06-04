@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 export type TimeLogActionState = { error: string } | null;
@@ -78,10 +78,13 @@ async function closeTimeLog(
 export async function stopTimerAction(
   logId: string,
   projectId: string,
-  endedAt: string
+  endedAt: string,
+  taskId: string
 ): Promise<TimeLogActionState> {
   const result = await closeTimeLog(logId, endedAt);
   if (result) return result;
+  revalidateTag("dashboard", {});
+  revalidateTag(`time-logs-${taskId}`, {});
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/");
   return null;
@@ -93,6 +96,7 @@ export async function resolveOrphanedTimerAction(
 ): Promise<TimeLogActionState> {
   const result = await closeTimeLog(logId, endedAt);
   if (result) return result;
+  revalidateTag("dashboard", {});
   revalidatePath("/");
   revalidatePath("/projects", "layout");
   return null;
@@ -109,6 +113,7 @@ export async function discardOrphanedTimerAction(
 
   if (error) return { error: "Zeitprotokoll konnte nicht gelöscht werden." };
 
+  revalidateTag("dashboard", {});
   revalidatePath("/");
   return null;
 }
@@ -154,6 +159,8 @@ export async function createManualTimeLogAction(
 
   if (error) return { error: "Zeiteintrag konnte nicht gespeichert werden." };
 
+  revalidateTag("dashboard", {});
+  revalidateTag(`time-logs-${taskId}`, {});
   revalidatePath(`/projects/${projectId}`);
   return null;
 }
