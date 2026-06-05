@@ -1,6 +1,7 @@
 import { getDashboardStats, getWeeklyHours, getDailyHours, getHourlyDistribution } from "@/lib/data/dashboard";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
 import { ChartSection } from "@/components/dashboard/chart-section";
+import { LogTime } from "@/components/log-time";
 
 function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -10,21 +11,6 @@ function formatMinutes(minutes: number): string {
   return `${h} h ${m} min`;
 }
 
-function formatLogTime(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const time = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-
-  if (d.toDateString() === today.toDateString()) return `Heute, ${time}`;
-  if (d.toDateString() === yesterday.toDateString()) return `Gestern, ${time}`;
-
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}.${month}., ${time}`;
-}
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -98,7 +84,7 @@ export default async function DashboardPage() {
                         {formatMinutes(log.duration_minutes)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatLogTime(log.started_at)}
+                        <LogTime iso={log.started_at} />
                         {log.is_manual && " · manuell"}
                       </p>
                     </div>
