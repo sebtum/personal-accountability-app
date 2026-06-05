@@ -1,6 +1,6 @@
 {
-  "name": "Accountability App",
-  "short_name": "Accountability",
+  "name": "tapanti",
+  "short_name": "tapanti",
   "description": "Personal time tracking and accountability",
   "start_url": "/",
   "display": "standalone",
