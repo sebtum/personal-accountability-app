@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useTimerStore } from "@/store/index";
 import { startTimerAction, stopTimerAction } from "@/lib/actions/time-logs";
 import { Button } from "@/components/ui/button";
+import { useTimerSync } from "@/components/timer/use-timer-sync";
 
 function formatElapsed(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -72,6 +73,8 @@ export function TaskTimerButton({ taskId, projectId }: Props) {
       stopTimer();
     });
   }
+
+  useTimerSync(isActive ? activeLogId : null);
 
   const otherActive = activeTaskId !== null && activeTaskId !== taskId;
 

@@ -137,7 +137,7 @@ export default async function ProjectDetailPage({
             {sorted.map((task) => (
               <div
                 key={task.id}
-                className="rounded-lg border bg-card px-4 py-3 flex items-start justify-between gap-4"
+                className="rounded-lg border bg-card px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -180,7 +180,7 @@ export default async function ProjectDetailPage({
                   />
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <div className="flex items-center gap-2 flex-wrap sm:shrink-0 sm:justify-end">
                   {task.status !== "done" && (
                     <TaskTimerButton taskId={task.id} projectId={id} />
                   )}
