@@ -18,10 +18,13 @@ type TimeLogWithTask = TimeLog & {
 // Not cached — must always reflect current timer state
 export async function getOrphanedTimer(): Promise<OrphanedTimer | null> {
   const supabase = await createClient();
+  const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
+
   const { data, error } = await supabase
     .from("time_logs")
     .select("id,task_id,started_at,ended_at,duration_minutes,notes,is_manual,created_at, tasks(name, project_id)")
     .is("ended_at", null)
+    .lt("started_at", thirtySecondsAgo)
     .order("created_at", { ascending: true })
     .limit(1)
     .single();
