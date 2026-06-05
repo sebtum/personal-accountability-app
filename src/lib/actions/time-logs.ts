@@ -124,17 +124,16 @@ export async function createManualTimeLogAction(
 ): Promise<TimeLogActionState> {
   const taskId = formData.get("task_id") as string;
   const projectId = formData.get("project_id") as string;
-  const date = formData.get("date") as string;
-  const startTime = formData.get("start_time") as string;
-  const endTime = formData.get("end_time") as string;
+  const startedAtISO = formData.get("started_at_iso") as string;
+  const endedAtISO = formData.get("ended_at_iso") as string;
   const notes = (formData.get("notes") as string)?.trim() || null;
 
-  if (!date || !startTime || !endTime) {
+  if (!startedAtISO || !endedAtISO) {
     return { error: "Datum, Startzeit und Endzeit sind Pflichtfelder." };
   }
 
-  const startedAt = new Date(`${date}T${startTime}:00`);
-  const endedAt = new Date(`${date}T${endTime}:00`);
+  const startedAt = new Date(startedAtISO);
+  const endedAt = new Date(endedAtISO);
 
   if (isNaN(startedAt.getTime()) || isNaN(endedAt.getTime())) {
     return { error: "Ungültiges Datum oder Uhrzeit." };

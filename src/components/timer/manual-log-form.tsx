@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 type Props = {
@@ -24,6 +25,13 @@ export function ManualLogForm({ taskId, taskName, projectId }: Props) {
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    const date = formData.get("date") as string;
+    const startTime = formData.get("start_time") as string;
+    const endTime = formData.get("end_time") as string;
+    if (date && startTime && endTime) {
+      formData.set("started_at_iso", new Date(`${date}T${startTime}:00`).toISOString());
+      formData.set("ended_at_iso", new Date(`${date}T${endTime}:00`).toISOString());
+    }
     startTransition(async () => {
       const result = await createManualTimeLogAction(null, formData);
       if (result?.error) {
