@@ -1,32 +1,26 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createCacheClient, getAuthToken } from "@/lib/supabase/server-cache";
+import {
+  type CivilDate,
+  addCivilDays,
+  civilDateKey,
+  formatCivilShortDate,
+  getZonedParts,
+  isoWeekNumber,
+  nextZonedHourBoundaryUtc,
+  startOfZonedDay,
+  startOfZonedWeek,
+  zonedPartsToUtc,
+} from "@/lib/timezone";
 
 const CHART_COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444",
   "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316",
 ];
 
-function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function getWeekLabel(monday: Date): string {
-  const d = new Date(monday);
-  d.setDate(d.getDate() + 3);
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `KW ${weekNum}`;
-}
-
-function formatShortDate(date: Date): string {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${dd}.${mm}.`;
+function getWeekLabel(civil: CivilDate): string {
+  return `KW ${isoWeekNumber(civil)}`;
 }
 
 export type WeeklyChartData = {
@@ -95,11 +89,11 @@ const _cachedGetWeeklyHours = unstable_cache(
 
     for (const row of data) {
       const projectName: string = row.tasks?.projects?.name ?? "Unbekannt";
-      const monday = getMonday(new Date(row.started_at));
-      const weekKey = monday.toISOString().slice(0, 10);
+      const mondayCivil = getZonedParts(startOfZonedWeek(new Date(row.started_at)));
+      const weekKey = civilDateKey(mondayCivil);
       projectNames.add(projectName);
       if (!weekMap.has(weekKey)) {
-        weekMap.set(weekKey, { label: getWeekLabel(monday), hours: new Map() });
+        weekMap.set(weekKey, { label: getWeekLabel(mondayCivil), hours: new Map() });
       }
       const entry = weekMap.get(weekKey)!;
       entry.hours.set(projectName, (entry.hours.get(projectName) ?? 0) + (row.duration_minutes ?? 0));
@@ -128,14 +122,15 @@ const _cachedGetWeeklyHours = unstable_cache(
 const _cachedGetDailyHours = unstable_cache(
   async (token: string, weekOffset: number): Promise<DailyChartData> => {
     const supabase = createCacheClient(token);
-    const base = new Date();
-    base.setDate(base.getDate() + weekOffset * 7);
-    const monday = getMonday(base);
-    const nextMonday = new Date(monday);
-    nextMonday.setDate(monday.getDate() + 7);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const weekLabel = `${getWeekLabel(monday)}, ${formatShortDate(monday)}–${formatShortDate(sunday)}${sunday.getFullYear()}`;
+    const todayCivil = getZonedParts(new Date());
+    const targetCivil = addCivilDays(todayCivil, weekOffset * 7);
+    // Noon avoids any theoretical edge case around a DST boundary while resolving the right calendar week.
+    const monday = startOfZonedWeek(zonedPartsToUtc({ ...targetCivil, hour: 12, minute: 0, second: 0 }));
+    const mondayCivil = getZonedParts(monday);
+    const nextMondayCivil = addCivilDays(mondayCivil, 7);
+    const nextMonday = zonedPartsToUtc({ ...nextMondayCivil, hour: 0, minute: 0, second: 0 });
+    const sundayCivil = addCivilDays(mondayCivil, 6);
+    const weekLabel = `${getWeekLabel(mondayCivil)}, ${formatCivilShortDate(mondayCivil)}–${formatCivilShortDate(sundayCivil)}${sundayCivil.year}`;
 
     const { data: rawData, error } = await supabase
       .from("time_logs")
@@ -155,8 +150,7 @@ const _cachedGetDailyHours = unstable_cache(
 
     for (const row of data ?? []) {
       const projectName: string = row.tasks?.projects?.name ?? "Unbekannt";
-      const d = new Date(row.started_at);
-      const dayOfWeek = (d.getDay() + 6) % 7;
+      const dayOfWeek = getZonedParts(new Date(row.started_at)).weekdayMon0;
       projectNames.add(projectName);
       if (!dayMap.has(dayOfWeek)) dayMap.set(dayOfWeek, new Map());
       const entry = dayMap.get(dayOfWeek)!;
@@ -165,11 +159,8 @@ const _cachedGetDailyHours = unstable_cache(
 
     const sortedProjects = [...projectNames].sort();
     const bars = Array.from({ length: 7 }, (_, i) => {
-      const dateForDay = new Date(monday);
-      dateForDay.setDate(monday.getDate() + i);
-      const dd = String(dateForDay.getDate()).padStart(2, "0");
-      const mm = String(dateForDay.getMonth() + 1).padStart(2, "0");
-      const bar: Record<string, string | number> = { day: `${DAY_LABELS[i]} ${dd}.${mm}.` };
+      const dayCivil = addCivilDays(mondayCivil, i);
+      const bar: Record<string, string | number> = { day: `${DAY_LABELS[i]} ${formatCivilShortDate(dayCivil)}` };
       const dayEntry = dayMap.get(i);
       for (const name of sortedProjects) {
         bar[name] = Math.round(((dayEntry?.get(name) ?? 0) / 60) * 10) / 10;
@@ -190,9 +181,9 @@ const _cachedGetDailyHours = unstable_cache(
 const _cachedGetHourlyDistribution = unstable_cache(
   async (token: string, windowDays: number): Promise<HourlyChartData> => {
     const supabase = createCacheClient(token);
-    const since = new Date();
-    since.setDate(since.getDate() - windowDays);
-    since.setHours(0, 0, 0, 0);
+    const todayStart = startOfZonedDay(new Date());
+    const sinceCivil = addCivilDays(getZonedParts(todayStart), -windowDays);
+    const since = zonedPartsToUtc({ ...sinceCivil, hour: 0, minute: 0, second: 0 });
 
     const { data: rawData, error } = await supabase
       .from("time_logs")
@@ -208,11 +199,9 @@ const _cachedGetHourlyDistribution = unstable_cache(
         if (isNaN(end.getTime())) continue;
         let cur = new Date(start);
         while (cur < end) {
-          const nextHour = new Date(cur);
-          nextHour.setMinutes(0, 0, 0);
-          nextHour.setHours(nextHour.getHours() + 1);
+          const nextHour = nextZonedHourBoundaryUtc(cur);
           const segEnd = end < nextHour ? end : nextHour;
-          hourTotals[cur.getHours()] += (segEnd.getTime() - cur.getTime()) / 60000;
+          hourTotals[getZonedParts(cur).hour] += (segEnd.getTime() - cur.getTime()) / 60000;
           cur = nextHour;
         }
       }
@@ -233,8 +222,7 @@ const _cachedGetHourlyDistribution = unstable_cache(
 const _cachedGetDashboardStats = unstable_cache(
   async (token: string): Promise<DashboardStats> => {
     const supabase = createCacheClient(token);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStart = startOfZonedDay(new Date());
 
     const [projectsRes, openTasksRes, todayLogsRes, inProgressRes, recentLogsRes] =
       await Promise.all([
