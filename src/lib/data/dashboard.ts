@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createCacheClient, getAuthToken } from "@/lib/supabase/server-cache";
+import { type ActivityBlock, type ActivityRow, groupIntoBlocks } from "@/lib/data/activity-blocks";
 import {
   type CivilDate,
   addCivilDays,
@@ -14,10 +15,22 @@ import {
   zonedPartsToUtc,
 } from "@/lib/timezone";
 
+export { ACTIVITY_MERGE_GAP_MINUTES } from "@/lib/data/activity-blocks";
+export type { ActivityBlock, ActivitySession } from "@/lib/data/activity-blocks";
+
 const CHART_COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444",
   "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316",
 ];
+
+/** Raw logs pulled before grouping — grouping collapses rows, so we over-fetch. */
+const ACTIVITY_FETCH_LIMIT = 40;
+
+/** Blocks rendered in "Letzte Aktivität". */
+const ACTIVITY_BLOCK_LIMIT = 5;
+
+/** Tasks rendered in "Zuletzt bearbeitet". */
+const RECENT_TASK_LIMIT = 5;
 
 function getWeekLabel(civil: CivilDate): string {
   return `KW ${isoWeekNumber(civil)}`;
@@ -34,21 +47,11 @@ export type DailyChartData = {
   weekLabel: string;
 };
 
-export type InProgressTask = {
+export type RecentTask = {
   id: string;
   name: string;
   project_id: string;
   project_name: string;
-  estimated_hours: number;
-};
-
-export type RecentLog = {
-  id: string;
-  task_name: string;
-  project_name: string;
-  started_at: string;
-  duration_minutes: number;
-  is_manual: boolean;
 };
 
 export type HourlyChartData = {
@@ -60,8 +63,8 @@ export type DashboardStats = {
   activeProjects: number;
   openTasks: number;
   todayMinutes: number;
-  inProgressTasks: InProgressTask[];
-  recentLogs: RecentLog[];
+  recentTasks: RecentTask[];
+  activityBlocks: ActivityBlock[];
 };
 
 // ─── Module-level cache references (stable function identity) ────────────────
@@ -224,42 +227,70 @@ const _cachedGetDashboardStats = unstable_cache(
     const supabase = createCacheClient(token);
     const todayStart = startOfZonedDay(new Date());
 
-    const [projectsRes, openTasksRes, todayLogsRes, inProgressRes, recentLogsRes] =
-      await Promise.all([
-        supabase.from("projects").select("id", { count: "exact" }).eq("status", "active"),
-        supabase.from("tasks").select("id", { count: "exact" }).in("status", ["todo", "in_progress"]),
-        supabase.from("time_logs").select("duration_minutes").gte("started_at", todayStart.toISOString()).not("ended_at", "is", null),
-        supabase.from("tasks").select("id, name, project_id, estimated_hours, projects(name)").eq("status", "in_progress"),
-        supabase.from("time_logs").select("id, started_at, duration_minutes, is_manual, tasks(name, project_id, projects(name))").not("ended_at", "is", null).order("started_at", { ascending: false }).limit(5),
-      ]);
+    const [projectsRes, openTasksRes, todayLogsRes, activityRes] = await Promise.all([
+      supabase.from("projects").select("id", { count: "exact" }).eq("status", "active"),
+      // Doubles as the fallback for "Zuletzt bearbeitet". `count: "exact"` is
+      // computed over the filter, not the range, so `.limit(5)` is safe here.
+      supabase.from("tasks").select("id, name, project_id, projects(name)", { count: "exact" }).in("status", ["todo", "in_progress"]).order("created_at", { ascending: false }).limit(RECENT_TASK_LIMIT),
+      supabase.from("time_logs").select("duration_minutes").gte("started_at", todayStart.toISOString()).not("ended_at", "is", null),
+      supabase.from("time_logs").select("id, task_id, started_at, ended_at, duration_minutes, is_manual, notes, tasks(name, status, project_id, projects(name))").not("ended_at", "is", null).order("started_at", { ascending: false }).limit(ACTIVITY_FETCH_LIMIT),
+    ]);
+
+    // Without this, any query failure renders silently as 0 / empty.
+    for (const [label, res] of [
+      ["projects", projectsRes],
+      ["openTasks", openTasksRes],
+      ["todayLogs", todayLogsRes],
+      ["activity", activityRes],
+    ] as const) {
+      if (res.error) console.error(`[dashboard-stats] ${label} query failed:`, res.error);
+    }
 
     const todayMinutes = (todayLogsRes.data ?? []).reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inProgressTasks: InProgressTask[] = (inProgressRes.data ?? []).map((t: any) => ({
-      id: t.id,
-      name: t.name,
-      project_id: t.project_id,
-      project_name: t.projects?.name ?? "–",
-      estimated_hours: t.estimated_hours,
-    }));
+    const activityRows = (activityRes.data ?? []) as unknown as ActivityRow[];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recentLogs: RecentLog[] = (recentLogsRes.data ?? []).map((l: any) => ({
-      id: l.id,
-      task_name: l.tasks?.name ?? "–",
-      project_name: l.tasks?.projects?.name ?? "–",
-      started_at: l.started_at,
-      duration_minutes: l.duration_minutes ?? 0,
-      is_manual: l.is_manual,
-    }));
+    const blocks = groupIntoBlocks(activityRows);
+    // A full page means the oldest block may continue past the fetch window,
+    // which would understate its total — drop it rather than show a wrong sum.
+    if (activityRows.length === ACTIVITY_FETCH_LIMIT) blocks.pop();
+    const activityBlocks = blocks.slice(0, ACTIVITY_BLOCK_LIMIT);
+
+    // Tasks worked on most recently, newest first, "done" ones excluded.
+    const seen = new Set<string>();
+    const recentTasks: RecentTask[] = [];
+    for (const row of activityRows) {
+      if (!row.tasks || row.tasks.status === "done" || seen.has(row.task_id)) continue;
+      seen.add(row.task_id);
+      recentTasks.push({
+        id: row.task_id,
+        name: row.tasks.name,
+        project_id: row.tasks.project_id,
+        project_name: row.tasks.projects?.name ?? "–",
+      });
+      if (recentTasks.length === RECENT_TASK_LIMIT) break;
+    }
+
+    // Nothing logged yet — fall back to the newest open tasks so the panel is
+    // still actionable for a fresh account.
+    if (recentTasks.length === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const t of (openTasksRes.data ?? []) as any[]) {
+        recentTasks.push({
+          id: t.id,
+          name: t.name,
+          project_id: t.project_id,
+          project_name: t.projects?.name ?? "–",
+        });
+      }
+    }
 
     return {
       activeProjects: projectsRes.count ?? 0,
       openTasks: openTasksRes.count ?? 0,
       todayMinutes,
-      inProgressTasks,
-      recentLogs,
+      recentTasks,
+      activityBlocks,
     };
   },
   ["dashboard-stats"],

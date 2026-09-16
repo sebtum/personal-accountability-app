@@ -5,16 +5,7 @@ import { useTimerStore } from "@/store/index";
 import { startTimerAction, stopTimerAction } from "@/lib/actions/time-logs";
 import { Button } from "@/components/ui/button";
 import { useTimerSync } from "@/components/timer/use-timer-sync";
-
-function formatElapsed(seconds: number) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return h > 0
-    ? `${pad(h)}:${pad(m)}:${pad(s)}`
-    : `${pad(m)}:${pad(s)}`;
-}
+import { formatElapsed } from "@/lib/utils";
 
 type Props = {
   taskId: string;

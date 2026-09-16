@@ -1,25 +1,10 @@
 import { getDashboardStats, getWeeklyHours, getDailyHours, getHourlyDistribution } from "@/lib/data/dashboard";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
 import { ChartSection } from "@/components/dashboard/chart-section";
-import { LogTime } from "@/components/log-time";
-
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} h`;
-  return `${h} h ${m} min`;
-}
-
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-card px-4 py-5">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold tabular-nums">{value}</p>
-    </div>
-  );
-}
+import { StatCard } from "@/components/dashboard/stat-card";
+import { RunningTimerCard } from "@/components/dashboard/running-timer-card";
+import { ActivityBlockCard } from "@/components/dashboard/activity-block-card";
+import { formatMinutes } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const [stats, weeklyHours, dailyHours, hourlyHours] = await Promise.all([
@@ -40,17 +25,17 @@ export default async function DashboardPage() {
           label="Heute erfasst"
           value={stats.todayMinutes > 0 ? formatMinutes(stats.todayMinutes) : "—"}
         />
-        <StatCard label="In Bearbeitung" value={String(stats.inProgressTasks.length)} />
+        <RunningTimerCard />
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         <section>
-          <h2 className="font-medium mb-3">In Bearbeitung</h2>
-          {stats.inProgressTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Tasks in Bearbeitung.</p>
+          <h2 className="font-medium mb-3">Zuletzt bearbeitet</h2>
+          {stats.recentTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Tasks vorhanden.</p>
           ) : (
             <div className="grid gap-2">
-              {stats.inProgressTasks.map((task) => (
+              {stats.recentTasks.map((task) => (
                 <div
                   key={task.id}
                   className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between gap-4"
@@ -68,28 +53,12 @@ export default async function DashboardPage() {
 
         <section>
           <h2 className="font-medium mb-3">Letzte Aktivität</h2>
-          {stats.recentLogs.length === 0 ? (
+          {stats.activityBlocks.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine Zeiteinträge.</p>
           ) : (
             <div className="grid gap-2">
-              {stats.recentLogs.map((log) => (
-                <div key={log.id} className="rounded-lg border bg-card px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{log.task_name}</p>
-                      <p className="text-xs text-muted-foreground">{log.project_name}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold tabular-nums">
-                        {formatMinutes(log.duration_minutes)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        <LogTime iso={log.started_at} />
-                        {log.is_manual && " · manuell"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              {stats.activityBlocks.map((block) => (
+                <ActivityBlockCard key={block.id} block={block} />
               ))}
             </div>
           )}
