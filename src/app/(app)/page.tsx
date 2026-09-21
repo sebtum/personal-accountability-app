@@ -1,5 +1,6 @@
 import { getDashboardStats, getWeeklyHours, getDailyHours, getHourlyDistribution } from "@/lib/data/dashboard";
 import { TaskTimerButton } from "@/components/timer/task-timer-button";
+import { ManualLogForm } from "@/components/timer/manual-log-form";
 import { ChartSection } from "@/components/dashboard/chart-section";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { RunningTimerCard } from "@/components/dashboard/running-timer-card";
@@ -44,7 +45,10 @@ export default async function DashboardPage() {
                     <p className="text-sm font-medium truncate">{task.name}</p>
                     <p className="text-xs text-muted-foreground">{task.project_name}</p>
                   </div>
-                  <TaskTimerButton taskId={task.id} projectId={task.project_id} />
+                  <div className="flex items-center gap-2">
+                    <TaskTimerButton taskId={task.id} projectId={task.project_id} />
+                    <ManualLogForm taskId={task.id} taskName={task.name} projectId={task.project_id} />
+                  </div>
                 </div>
               ))}
             </div>

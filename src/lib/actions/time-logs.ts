@@ -161,5 +161,6 @@ export async function createManualTimeLogAction(
   revalidateTag("dashboard", {});
   revalidateTag(`time-logs-${taskId}`, {});
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
   return null;
 }
