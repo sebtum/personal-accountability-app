@@ -25,7 +25,7 @@ export function HourlyChart({ data }: { data: HourlyChartData }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data.bars} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={1} />
         <YAxis tick={{ fontSize: 11 }} unit=" min" />
         <Tooltip
@@ -34,9 +34,11 @@ export function HourlyChart({ data }: { data: HourlyChartData }) {
           contentStyle={{
             fontSize: 12,
             borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--background))",
+            border: "1px solid var(--border)",
+            background: "var(--popover)",
+            color: "var(--popover-foreground)",
           }}
+          itemStyle={{ color: "var(--popover-foreground)" }}
         />
         <Bar dataKey="minPerDay" fill="#6366f1" radius={[3, 3, 0, 0]} />
       </BarChart>
