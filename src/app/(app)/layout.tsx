@@ -4,6 +4,7 @@ import { NavLinks } from "@/components/nav-links";
 import { logout } from "@/lib/actions/auth";
 import { OrphanedTimerChecker } from "@/components/timer/orphaned-timer-checker";
 import { DataSync } from "@/components/data-sync";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -28,14 +29,17 @@ export default async function AppLayout({
           <span className="font-semibold text-sm">Accountability</span>
           <NavLinks />
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Abmelden
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Abmelden
+            </button>
+          </form>
+        </div>
       </header>
       <main className="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full">
         {children}
