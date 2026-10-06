@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createCacheClient, getAuthToken } from "@/lib/supabase/server-cache";
-import type { Database, PaginatedResult } from "@/types/database";
+import type { Database, PaginatedResult, ProjectStatus } from "@/types/database";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 
@@ -10,11 +10,17 @@ const PROJECT_FIELDS =
 
 // Module-level stable reference — unstable_cache key is deterministic
 const _cachedGetProjects = unstable_cache(
-  async (token: string, page: number, pageSize: number): Promise<PaginatedResult<Project>> => {
+  async (
+    token: string,
+    page: number,
+    pageSize: number,
+    status: ProjectStatus
+  ): Promise<PaginatedResult<Project>> => {
     const supabase = createCacheClient(token); // no cookies inside cache
     const { data, count, error } = await supabase
       .from("projects")
       .select(PROJECT_FIELDS, { count: "exact" })
+      .eq("status", status)
       .order("created_at", { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) throw new Error(error.message);
@@ -33,10 +39,11 @@ const _cachedGetProjects = unstable_cache(
 // Reads cookies once outside the cache, then delegates
 export const getProjects = cache(async (
   page: number = 0,
-  pageSize: number = 20
+  pageSize: number = 20,
+  status: ProjectStatus = "active"
 ): Promise<PaginatedResult<Project>> => {
   const token = await getAuthToken();
-  return _cachedGetProjects(token, page, pageSize);
+  return _cachedGetProjects(token, page, pageSize, status);
 });
 
 export const getProject = cache(async (id: string): Promise<Project | null> => {
