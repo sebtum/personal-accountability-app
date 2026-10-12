@@ -227,13 +227,15 @@ const _cachedGetDashboardStats = unstable_cache(
     const supabase = createCacheClient(token);
     const todayStart = startOfZonedDay(new Date());
 
-    const [projectsRes, openTasksRes, todayLogsRes, activityRes] = await Promise.all([
+    const [projectsRes, openTasksRes, todayLogsRes, activityRes, runningRes] = await Promise.all([
       supabase.from("projects").select("id", { count: "exact" }).eq("status", "active"),
       // Doubles as the fallback for "Zuletzt bearbeitet". `count: "exact"` is
       // computed over the filter, not the range, so `.limit(5)` is safe here.
       supabase.from("tasks").select("id, name, project_id, projects(name)", { count: "exact" }).in("status", ["todo", "in_progress"]).order("created_at", { ascending: false }).limit(RECENT_TASK_LIMIT),
       supabase.from("time_logs").select("duration_minutes").gte("started_at", todayStart.toISOString()).not("ended_at", "is", null),
       supabase.from("time_logs").select("id, task_id, started_at, ended_at, duration_minutes, is_manual, notes, tasks(name, status, project_id, projects(name))").not("ended_at", "is", null).order("started_at", { ascending: false }).limit(ACTIVITY_FETCH_LIMIT),
+      // Running timer: its task counts as recent immediately, so it can be stopped from the dashboard.
+      supabase.from("time_logs").select("task_id, tasks(name, status, project_id, projects(name))").is("ended_at", null).limit(1),
     ]);
 
     // Without this, any query failure renders silently as 0 / empty.
@@ -242,6 +244,7 @@ const _cachedGetDashboardStats = unstable_cache(
       ["openTasks", openTasksRes],
       ["todayLogs", todayLogsRes],
       ["activity", activityRes],
+      ["running", runningRes],
     ] as const) {
       if (res.error) console.error(`[dashboard-stats] ${label} query failed:`, res.error);
     }
@@ -259,6 +262,16 @@ const _cachedGetDashboardStats = unstable_cache(
     // Tasks worked on most recently, newest first, "done" ones excluded.
     const seen = new Set<string>();
     const recentTasks: RecentTask[] = [];
+    const running = ((runningRes.data ?? []) as unknown as ActivityRow[])[0];
+    if (running?.tasks && running.tasks.status !== "done") {
+      seen.add(running.task_id);
+      recentTasks.push({
+        id: running.task_id,
+        name: running.tasks.name,
+        project_id: running.tasks.project_id,
+        project_name: running.tasks.projects?.name ?? "–",
+      });
+    }
     for (const row of activityRows) {
       if (!row.tasks || row.tasks.status === "done" || seen.has(row.task_id)) continue;
       seen.add(row.task_id);

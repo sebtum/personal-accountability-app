@@ -39,6 +39,9 @@ export async function startTimerAction(
 
   if (error) return { error: "Timer konnte nicht gestartet werden." };
 
+  revalidateTag("dashboard", {});
+  revalidatePath("/");
+
   return { logId: data.id };
 }
 
