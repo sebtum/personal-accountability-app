@@ -34,6 +34,7 @@ src/
           tasks/
             new/page.tsx
             [taskId]/edit/page.tsx
+      tagesverlauf/page.tsx # hourly work distribution for a chosen day (?date=YYYY-MM-DD)
   components/
     ui/                    # button, input, label, textarea, select
     projects/project-form.tsx

@@ -18,7 +18,7 @@ import {
 export { ACTIVITY_MERGE_GAP_MINUTES } from "@/lib/data/activity-blocks";
 export type { ActivityBlock, ActivitySession } from "@/lib/data/activity-blocks";
 
-const CHART_COLORS = [
+export const CHART_COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444",
   "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316",
 ];
